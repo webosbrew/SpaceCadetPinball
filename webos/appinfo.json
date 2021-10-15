@@ -1,0 +1,10 @@
+{
+  "id": "com.github.k4zmu2a.space-cadet-pinball",
+  "version": "0.0.1",
+  "vendor": "webOS Brew Project",
+  "type": "native",
+  "main": "SpaceCadetPinball",
+  "title": "Pinball",
+  "icon": "icon.png",
+  "appDescription": "Technical Demo for SpaceCadetPinball"
+}

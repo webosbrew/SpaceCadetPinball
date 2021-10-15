@@ -276,3 +276,6 @@ out/
 # Windows XP stuff
 DebugWinXp/
 ReleaseWinXp/
+
+# webOS stuff
+/*.ipk

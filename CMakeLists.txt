@@ -217,3 +217,13 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_MIXER_DLL_PATH}/SDL2_mixer.dll" $<TARGET_FILE_DIR:SpaceCadetPinball>
         )
 endif()
+
+# On webOS, build IPK package
+if(WEBOS)
+    add_custom_command(TARGET SpaceCadetPinball POST_BUILD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND convert SpaceCadetPinball/Icon_1.ico -background none -gravity center -extent 80x80 $<TARGET_FILE_DIR:SpaceCadetPinball>/icon.png
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
+        COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
+        )
+endif()
