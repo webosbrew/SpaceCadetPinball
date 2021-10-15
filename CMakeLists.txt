@@ -222,6 +222,9 @@ endif()
 if(WEBOS)
     add_custom_command(TARGET SpaceCadetPinball POST_BUILD
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
+        COMMAND unzip ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>
+        COMMAND webos/gen_gamecontrollerdb.sh $<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt
         COMMAND convert SpaceCadetPinball/Icon_1.ico -background none -gravity center -extent 80x80 $<TARGET_FILE_DIR:SpaceCadetPinball>/icon.png
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>

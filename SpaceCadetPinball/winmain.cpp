@@ -85,6 +85,9 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Could not create window", SDL_GetError(), nullptr);
 		return 1;
 	}
+#ifdef _SDL_webOS_h
+    SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+#endif
 
 	SDL_Renderer* renderer = SDL_CreateRenderer
 	(
