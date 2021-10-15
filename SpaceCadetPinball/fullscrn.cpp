@@ -57,7 +57,11 @@ int fullscrn::enableFullscreen()
 {
 	if (!display_changed)
 	{
+#ifndef _SDL_webOS_h
 		if (SDL_SetWindowFullscreen(winmain::MainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP) == 0)
+#else
+		if (SDL_SetWindowFullscreen(winmain::MainWindow, SDL_WINDOW_FULLSCREEN) == 0)
+#endif
 		{
 			display_changed = 1;
 			return 1;

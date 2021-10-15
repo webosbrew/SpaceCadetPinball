@@ -385,10 +385,12 @@ void winmain::RenderUi()
 			{
 				options::toggle(Menu1::Show_Menu);
 			}
+#ifndef _SDL_webOS_h
 			if (ImGui::MenuItem("Full Screen", "F4", Options.FullScreen))
 			{
 				options::toggle(Menu1::Full_Screen);
 			}
+#endif
 			if (ImGui::BeginMenu("Select Players"))
 			{
 				if (ImGui::MenuItem("1 Player", nullptr, Options.Players == 1))
