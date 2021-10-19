@@ -279,3 +279,4 @@ ReleaseWinXp/
 
 # webOS stuff
 /*.ipk
+/webosbrew.manifest.json

@@ -84,4 +84,4 @@ jobs:
         name: Release ${{ steps.tagName.outputs.tag }}
         prerelease: true
         allowUpdates: true
-        artifacts: "*.ipk"
+        artifacts: "*.ipk,webosbrew.manifest.json"

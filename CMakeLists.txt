@@ -175,7 +175,7 @@ set(SOURCE_FILES
 # On Windows, include resource file with the icon
 if(WIN32)
     set_source_files_properties(SpaceCadetPinball/SpaceCadetPinball.rc LANGUAGE RC)
-    list(APPEND SOURCE_FILES SpaceCadetPinball/SpaceCadetPinball.rc)   
+    list(APPEND SOURCE_FILES SpaceCadetPinball/SpaceCadetPinball.rc)
 endif(WIN32)
 
 add_executable(SpaceCadetPinball ${SOURCE_FILES})
@@ -211,7 +211,7 @@ if(WIN32)
         string(REGEX REPLACE "lib$" "bin" SDL2_DLL_PATH ${SDL2_DLL_PATH})
         string(REGEX REPLACE "lib$" "bin" SDL2_MIXER_DLL_PATH ${SDL2_MIXER_DLL_PATH})
     endif()
-    message(STATUS "copy paths='${SDL2_DLL_PATH}' '${SDL2_MIXER_DLL_PATH}'") 
+    message(STATUS "copy paths='${SDL2_DLL_PATH}' '${SDL2_MIXER_DLL_PATH}'")
     add_custom_command(TARGET SpaceCadetPinball POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_DLL_PATH}/SDL2.dll" $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_MIXER_DLL_PATH}/SDL2_mixer.dll" $<TARGET_FILE_DIR:SpaceCadetPinball>
@@ -224,10 +224,13 @@ if(WEBOS)
         COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
         COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
-        COMMAND convert SpaceCadetPinball/Icon_1.ico[6] -alpha on -background none -gravity center -extent 80x80 $<TARGET_FILE_DIR:SpaceCadetPinball>/icon.png
-        COMMAND convert SpaceCadetPinball/splash_bitmap.bmp -background black -gravity center -extent 640x480 $<TARGET_FILE_DIR:SpaceCadetPinball>/splash.png
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/icon.png $<TARGET_FILE_DIR:SpaceCadetPinball>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/splash.png $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
+        # Force PATH environment variable to use system python
+        COMMAND PATH=/bin:/usr/bin python3 webos/gen_manifest.py -a $<TARGET_FILE_DIR:SpaceCadetPinball>/appinfo.json
+        -p *.ipk -o webosbrew.manifest.json
         DEPENDS SpaceCadetPinball
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
