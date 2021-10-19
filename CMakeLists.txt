@@ -224,8 +224,9 @@ if(WEBOS)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
         COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>
-        COMMAND webos/gen_gamecontrollerdb.sh $<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt
+        COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
         COMMAND convert SpaceCadetPinball/Icon_1.ico[6] -alpha on -background none -gravity center -extent 80x80 $<TARGET_FILE_DIR:SpaceCadetPinball>/icon.png
+        COMMAND convert SpaceCadetPinball/splash_bitmap.bmp -background black -gravity center -extent 640x480 $<TARGET_FILE_DIR:SpaceCadetPinball>/splash.png
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
         )

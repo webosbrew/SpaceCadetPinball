@@ -1,6 +1,10 @@
 #!/bin/sh
 
-OUTPUT_FILE=$1
+echo ${OUTPUT_FILE}
+if [ -z "${OUTPUT_FILE}" ]; then
+  exit
+fi
+
 MAPPING_URL="https://github.com/gabomdq/SDL_GameControllerDB/raw/master/gamecontrollerdb.txt"
 
 echo "# Generated from ${MAPPING_URL}" > "${OUTPUT_FILE}"
