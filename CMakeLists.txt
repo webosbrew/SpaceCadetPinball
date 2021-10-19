@@ -220,8 +220,7 @@ endif()
 
 # On webOS, build IPK package
 if(WEBOS)
-    add_custom_command(TARGET SpaceCadetPinball POST_BUILD
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    add_custom_target(webos-package
         COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
         COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
@@ -229,5 +228,7 @@ if(WEBOS)
         COMMAND convert SpaceCadetPinball/splash_bitmap.bmp -background black -gravity center -extent 640x480 $<TARGET_FILE_DIR:SpaceCadetPinball>/splash.png
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
+        DEPENDS SpaceCadetPinball
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 endif()
