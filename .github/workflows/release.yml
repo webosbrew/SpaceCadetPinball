@@ -69,11 +69,6 @@ jobs:
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config $BUILD_TYPE --target webos-package
 
-    - name: Set Environment for Release
-      working-directory: ${{github.workspace}}/build
-      shell: bash
-      run: cat github-release.env >> $GITHUB_ENV
-
     - name: Test
       working-directory: ${{github.workspace}}/build
       shell: bash
@@ -89,4 +84,4 @@ jobs:
         name: Release ${{ steps.tagName.outputs.tag }}
         prerelease: true
         allowUpdates: true
-        artifacts: build/${{ env.RELEASE_IPK_FILENAME }},build/${{env.RELEASE_MANIFEST_FILENAME}}
+        artifacts: "*.ipk"
