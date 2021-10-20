@@ -222,11 +222,12 @@ endif()
 if(WEBOS)
     add_custom_target(webos-package
         COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
-        COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>
+        COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>/data
         COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/icon.png $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/splash.png $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
+        COMMAND ${CMAKE_COMMAND} -E copy_directory webos/lib $<TARGET_FILE_DIR:SpaceCadetPinball>/lib
         COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
         # Force PATH environment variable to use system python
         COMMAND PATH=/bin:/usr/bin python3 webos/gen_manifest.py -a $<TARGET_FILE_DIR:SpaceCadetPinball>/appinfo.json

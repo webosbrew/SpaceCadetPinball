@@ -247,5 +247,9 @@ int pinball::get_rc_int(int uID, int* dst)
 
 std::string pinball::make_path_name(const std::string& fileName)
 {
+#ifndef _SDL_webOS_h
 	return winmain::BasePath + fileName;
+#else
+    return winmain::BasePath + ("data/" + fileName);
+#endif
 }
