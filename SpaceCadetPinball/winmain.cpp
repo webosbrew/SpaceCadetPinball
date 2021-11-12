@@ -15,16 +15,16 @@ SDL_Renderer* winmain::Renderer = nullptr;
 ImGuiIO* winmain::ImIO = nullptr;
 
 int winmain::return_value = 0;
-int winmain::bQuit = 0;
-int winmain::activated;
+bool winmain::bQuit = false;
+bool winmain::activated = false;
 int winmain::DispFrameRate = 0;
-int winmain::DispGRhistory = 0;
-int winmain::single_step = 0;
-int winmain::has_focus = 1;
+bool winmain::DispGRhistory = false;
+bool winmain::single_step = false;
+bool winmain::has_focus = true;
 int winmain::last_mouse_x;
 int winmain::last_mouse_y;
 int winmain::mouse_down;
-int winmain::no_time_loss;
+bool winmain::no_time_loss = false;
 
 bool winmain::restart = false;
 
@@ -36,7 +36,8 @@ bool winmain::ShowSpriteViewer = false;
 bool winmain::LaunchBallEnabled = true;
 bool winmain::HighScoresEnabled = true;
 bool winmain::DemoActive = false;
-char* winmain::BasePath;
+std::string winmain::BasePath;
+int winmain::MainMenuHeight = 0;
 std::string winmain::FpsDetails;
 double winmain::UpdateToFrameRatio;
 winmain::DurationMs winmain::TargetFrameTime;
@@ -51,24 +52,50 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 
 	// SDL init
 	SDL_SetMainReady();
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO |
+		SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0)
 	{
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Could not initialize SDL2", SDL_GetError(), nullptr);
 		return 1;
 	}
-	BasePath = SDL_GetBasePath();
 
 	pinball::quickFlag = strstr(lpCmdLine, "-quick") != nullptr;
-	DatFileName = options::get_string("Pinball Data", pinball::get_rc_string(168, 0));
 
-	/*Check for full tilt .dat file and switch to it automatically*/
-	auto cadetFilePath = pinball::make_path_name("CADET.DAT");
-	auto cadetDat = fopen(cadetFilePath.c_str(), "r");
-	if (cadetDat)
+	// Search for game data in: game folder, user folder
+	// Game data test order: CADET.DAT, PINBALL.DAT
+	char* dataSearchPaths[2]
 	{
-		fclose(cadetDat);
-		DatFileName = "CADET.DAT";
-		pb::FullTiltMode = true;
+		 SDL_GetBasePath(),
+		 SDL_GetPrefPath(nullptr, "SpaceCadetPinball")
+	};
+	std::string datFileNames[2]
+	{
+		"CADET.DAT",
+		options::get_string("Pinball Data", pinball::get_rc_string(168, 0))
+	};
+	for (auto path : dataSearchPaths)
+	{
+		if (DatFileName.empty() && path)
+		{
+			BasePath = path;
+			for (int i = 0; i < 2; i++)
+			{
+				auto datFileName = datFileNames[i];
+				auto datFilePath = pinball::make_path_name(datFileName);
+				auto datFile = fopenu(datFilePath.c_str(), "r");
+				if (datFile)
+				{
+					fclose(datFile);
+					DatFileName = datFileName;
+					if (i == 0)
+						pb::FullTiltMode = true;
+					printf("Loading game from: %s\n", datFilePath.c_str());
+					break;
+				}
+			}
+		}
+
+		SDL_free(path);
 	}
 
 	// SDL window
@@ -89,18 +116,25 @@ int winmain::WinMain(LPCSTR lpCmdLine)
     SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
 #endif
 
-	SDL_Renderer* renderer = SDL_CreateRenderer
-	(
-		window,
-		-1,
-		SDL_RENDERER_ACCELERATED
-	);
-	Renderer = renderer;
+	// If HW fails, fallback to SW SDL renderer.
+	SDL_Renderer* renderer = nullptr;
+	for (int i = 0; i < 2 && !renderer; i++)
+	{
+		Renderer = renderer = SDL_CreateRenderer
+		(
+			window,
+			-1,
+			i == 0 ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE
+		);
+	}
 	if (!renderer)
 	{
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Could not create renderer", SDL_GetError(), window);
 		return 1;
 	}
+	SDL_RendererInfo rendererInfo{};
+	if (!SDL_GetRendererInfo(renderer, &rendererInfo))
+		printf("Using SDL renderer: %s\n", rendererInfo.name);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
@@ -154,7 +188,7 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 	else
 		pb::replay_level(0);
 
-	unsigned dtHistoryCounter = 300u, updateCounter = 0, frameCounter = 0;
+	unsigned updateCounter = 0, frameCounter = 0;
 
 	auto frameStart = Clock::now();
 	double UpdateToFrameCounter = 0;
@@ -178,36 +212,6 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 			}
 		}
 
-		if (DispGRhistory)
-		{
-			if (!gfr_display)
-			{
-				auto plt = static_cast<ColorRgba*>(malloc(1024u));
-				auto pltPtr = &plt[10];
-				for (int i1 = 0, i2 = 0; i1 < 256 - 10; ++i1, i2 += 8)
-				{
-					unsigned char blue = i2, redGreen = i2;
-					if (i2 > 255)
-					{
-						blue = 255;
-						redGreen = i1;
-					}
-
-					*pltPtr++ = ColorRgba{Rgba{redGreen, redGreen, blue, 0}};
-				}
-				gdrv::display_palette(plt);
-				free(plt);
-				gfr_display = new gdrv_bitmap8(400, 15, false);
-			}
-
-			if (!dtHistoryCounter)
-			{
-				dtHistoryCounter = 300;
-				gdrv::copy_bitmap(render::vscreen, 300, 10, 0, 30, gfr_display, 0, 0);
-				gdrv::fill_bitmap(gfr_display, 300, 10, 0, 0, 0);
-			}
-		}
-
 		if (!ProcessWindowMessages() || bQuit)
 			break;
 
@@ -218,8 +222,8 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 				int x, y, w, h;
 				SDL_GetMouseState(&x, &y);
 				SDL_GetWindowSize(window, &w, &h);
-				float dx = (last_mouse_x - x) / static_cast<float>(w);
-				float dy = (y - last_mouse_y) / static_cast<float>(h);
+				float dx = static_cast<float>(last_mouse_x - x) / static_cast<float>(w);
+				float dy = static_cast<float>(y - last_mouse_y) / static_cast<float>(h);
 				pb::ballset(dx, dy);
 
 				SDL_WarpMouseInWindow(window, last_mouse_x, last_mouse_y);
@@ -228,24 +232,37 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 				//last_mouse_x = x;
 				//last_mouse_y = y;
 			}
-			if (!single_step)
+			if (!single_step && !no_time_loss)
 			{
 				auto dt = static_cast<float>(frameDuration.count());
-				auto dtWhole = static_cast<int>(std::round(dt));
 				pb::frame(dt);
-				if (gfr_display)
+				if (DispGRhistory)
 				{
-					auto deltaTPal = dtWhole + 10;
-					auto fillChar = static_cast<uint8_t>(deltaTPal);
-					if (deltaTPal > 236)
+					auto width = 300;
+					auto height = 64;
+					if (!gfr_display)
 					{
-						fillChar = 1;
+						gfr_display = new gdrv_bitmap8(width, height, false);
+						gfr_display->CreateTexture("nearest", SDL_TEXTUREACCESS_STREAMING);
 					}
-					gdrv::fill_bitmap(gfr_display, 1, 10, 300 - dtHistoryCounter, 0, fillChar);
-					--dtHistoryCounter;
+
+					gdrv::ScrollBitmapHorizontal(gfr_display, -1);
+
+					auto target = static_cast<float>(TargetFrameTime.count());
+					auto scale = height / target / 2;
+					gdrv::fill_bitmap(gfr_display, 1, height, width - 1, 0, ColorRgba::Black()); // Background
+
+					auto targetVal = dt < target ? dt : target;
+					auto targetHeight = std::min(static_cast<int>(std::round(targetVal * scale)), width);
+					gdrv::fill_bitmap(gfr_display, 1, targetHeight, width - 1, height - targetHeight, ColorRgba::White()); // Target
+
+					auto diffVal = dt < target ? target - dt : dt - target;
+					auto diffHeight = std::min(static_cast<int>(std::round(diffVal * scale)), width);
+					gdrv::fill_bitmap(gfr_display, 1, diffHeight, width - 1, height - targetHeight - diffHeight, ColorRgba::Red()); // Target diff
 				}
 				updateCounter++;
 			}
+			no_time_loss = false;
 
 			if (UpdateToFrameCounter >= UpdateToFrameRatio)
 			{
@@ -295,6 +312,7 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 	}
 
 	delete gfr_display;
+	gfr_display = nullptr;
 	options::uninit();
 	midi::music_shutdown();
 	pb::uninit();
@@ -332,7 +350,6 @@ void winmain::RenderUi()
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
-		return;
 	}
 
 	// No demo window in release to save space
@@ -341,8 +358,16 @@ void winmain::RenderUi()
 		ImGui::ShowDemoWindow(&ShowImGuiDemo);
 #endif
 
-	if (ImGui::BeginMainMenuBar())
+	if (Options.ShowMenu && ImGui::BeginMainMenuBar())
 	{
+		int currentMenuHeight = static_cast<int>(ImGui::GetWindowSize().y);
+		if (MainMenuHeight != currentMenuHeight)
+		{
+			// Get the height of the main menu bar and update screen coordinates
+			MainMenuHeight = currentMenuHeight;
+			fullscrn::window_size_changed();
+		}
+
 		if (ImGui::BeginMenu("Game"))
 		{
 			if (ImGui::MenuItem("New Game", "F2"))
@@ -524,6 +549,10 @@ void winmain::RenderUi()
 					pause();
 				ShowSpriteViewer ^= true;
 			}
+			if (pb::cheat_mode && ImGui::MenuItem("Frame Times", nullptr, DispGRhistory))
+			{
+				DispGRhistory ^= true;
+			}
 			if (ImGui::BeginMenu("Cheats"))
 			{
 				if (ImGui::MenuItem("hidden test", nullptr, pb::cheat_mode))
@@ -562,6 +591,8 @@ void winmain::RenderUi()
 	if (ShowSpriteViewer)
 		render::SpriteViewer(&ShowSpriteViewer);
 	options::RenderControlDialog();
+	if (DispGRhistory)
+		RenderFrameTimeDialog();
 }
 
 int winmain::event_handler(const SDL_Event* event)
@@ -600,7 +631,7 @@ int winmain::event_handler(const SDL_Event* event)
 	{
 	case SDL_QUIT:
 		end_pause();
-		bQuit = 1;
+		bQuit = true;
 		fullscrn::shutdown();
 		return_value = 0;
 		return 0;
@@ -650,7 +681,26 @@ int winmain::event_handler(const SDL_Event* event)
 		switch (event->key.keysym.sym)
 		{
 		case SDLK_g:
-			DispGRhistory = 1;
+			DispGRhistory ^= true;
+			break;
+		case SDLK_o:
+			{
+				auto plt = new ColorRgba[4 * 256];
+				auto pltPtr = &plt[10]; // first 10 entries are system colors hardcoded in display_palette()
+				for (int i1 = 0, i2 = 0; i1 < 256 - 10; ++i1, i2 += 8)
+				{
+					unsigned char blue = i2, redGreen = i2;
+					if (i2 > 255)
+					{
+						blue = 255;
+						redGreen = i1;
+					}
+
+					*pltPtr++ = ColorRgba{ Rgba{redGreen, redGreen, blue, 0} };
+				}
+				gdrv::display_palette(plt);
+				delete[] plt;
+			}
 			break;
 		case SDLK_y:
 			SDL_SetWindowTitle(MainWindow, "Pinball");
@@ -660,9 +710,9 @@ int winmain::event_handler(const SDL_Event* event)
 			pb::frame(10);
 			break;
 		case SDLK_F10:
-			single_step = single_step == 0;
-			if (single_step == 0)
-				no_time_loss = 1;
+			single_step ^= true;
+			if (!single_step)
+				no_time_loss = true;
 			break;
 		default:
 			break;
@@ -718,21 +768,21 @@ int winmain::event_handler(const SDL_Event* event)
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 		case SDL_WINDOWEVENT_TAKE_FOCUS:
 		case SDL_WINDOWEVENT_SHOWN:
-			activated = 1;
+			activated = true;
 			Sound::Activate();
 			if (Options.Music && !single_step)
 				midi::play_pb_theme();
-			no_time_loss = 1;
-			has_focus = 1;
+			no_time_loss = true;
+			has_focus = true;
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 		case SDL_WINDOWEVENT_HIDDEN:
-			activated = 0;
+			activated = false;
 			fullscrn::activate(0);
 			Options.FullScreen = false;
 			Sound::Deactivate();
 			midi::music_stop();
-			has_focus = 0;
+			has_focus = false;
 			pb::loose_focus();
 			break;
 		case SDL_WINDOWEVENT_SIZE_CHANGED:
@@ -764,7 +814,14 @@ int winmain::event_handler(const SDL_Event* event)
 		case SDL_CONTROLLER_BUTTON_START:
 			pause();
 			break;
-		default: ;
+		case SDL_CONTROLLER_BUTTON_BACK:
+			if (single_step)
+			{
+				SDL_Event event{ SDL_QUIT };
+				SDL_PushEvent(&event);
+			}
+			break;
+		default:;
 		}
 		break;
 	case SDL_CONTROLLERBUTTONUP:
@@ -851,7 +908,7 @@ void winmain::end_pause()
 	if (single_step)
 	{
 		pb::pause_continue();
-		no_time_loss = 1;
+		no_time_loss = true;
 	}
 }
 
@@ -864,7 +921,7 @@ void winmain::new_game()
 void winmain::pause()
 {
 	pb::pause_continue();
-	no_time_loss = 1;
+	no_time_loss = true;
 }
 
 void winmain::Restart()
@@ -880,4 +937,24 @@ void winmain::UpdateFrameRate()
 	auto fps = Options.FramesPerSecond, ups = Options.UpdatesPerSecond;
 	UpdateToFrameRatio = static_cast<double>(ups) / fps;
 	TargetFrameTime = DurationMs(1000.0 / ups);
+}
+
+void winmain::RenderFrameTimeDialog()
+{
+	if (!gfr_display)
+		return;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2{ 300, 70 });
+	if (ImGui::Begin("Frame Times", &DispGRhistory, ImGuiWindowFlags_NoScrollbar))
+	{
+		auto target = static_cast<float>(TargetFrameTime.count());
+		auto scale = 1 / (64 / 2 / target);
+
+		ImGui::Text("Target frame time:%03.04fms, 1px:%03.04fms", target, scale);
+		gfr_display->BlitToTexture();
+		auto region = ImGui::GetContentRegionAvail();
+		ImGui::Image(gfr_display->Texture, region);
+	}
+	ImGui::End();
+	ImGui::PopStyleVar();
 }

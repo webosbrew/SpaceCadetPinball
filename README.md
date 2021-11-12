@@ -13,14 +13,16 @@ Supports data files from Windows and Full Tilt versions of the game.
 
 ## Known source ports
 
-| Platform           | Author     | URL                                                                                                        |
-| ------------------ | ---------- | ---------------------------------------------------------------------------------------------------------- |
-| PS Vita            | Axiom      | <https://github.com/suicvne/SpaceCadetPinball_Vita>                                                        |
-| Emscripten         | alula      | <https://github.com/alula/SpaceCadetPinball> <br> Play online: <https://alula.github.io/SpaceCadetPinball> |
-| Nintendo Switch    | averne     | <https://github.com/averne/SpaceCadetPinball-NX>                                                           |
-| webOS TV           | mariotaku  | <https://github.com/webosbrew/SpaceCadetPinball>                                                           |
-| Android (WIP)      | Iscle      | https://github.com/Iscle/SpaceCadetPinball                                                                 |
-| Nintendo Wii (WIP) | MaikelChan | https://github.com/MaikelChan/SpaceCadetPinball                                                            |
+| Platform           | Author          | URL                                                                                                        |
+| ------------------ | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| PS Vita            | Axiom           | <https://github.com/suicvne/SpaceCadetPinball_Vita>                                                        |
+| Emscripten         | alula           | <https://github.com/alula/SpaceCadetPinball> <br> Play online: <https://alula.github.io/SpaceCadetPinball> |
+| Nintendo Switch    | averne          | <https://github.com/averne/SpaceCadetPinball-NX>                                                           |
+| webOS TV           | mariotaku       | <https://github.com/webosbrew/SpaceCadetPinball>                                                           |
+| Android (WIP)      | Iscle           | https://github.com/Iscle/SpaceCadetPinball                                                                 |
+| Nintendo Wii       | MaikelChan      | https://github.com/MaikelChan/SpaceCadetPinball                                                            |
+| Nintendo 3DS       | MaikelChan      | https://github.com/MaikelChan/SpaceCadetPinball/tree/3ds                                                   |
+| Nintendo Wii U     | IntriguingTiles | https://github.com/IntriguingTiles/SpaceCadetPinball-WiiU                                                  |
 
 Platforms covered by this project: desktop Windows, Linux and macOS.
 
@@ -75,10 +77,10 @@ Tested with: macOS Big Sur (Intel) with Xcode 13 & macOS Montery Beta (Apple Sil
 * ~~Decompile original game~~
 * ~~Resizable window, scaled graphics~~
 * ~~Loader for high-res sprites from CADET.DAT~~
+* ~~Cross-platform port using SDL2, SDL2_mixer, ImGui~~
 * Misc features of Full Tilt: 3 music tracks, multiball, centered textboxes, etc.
-* Cross-platform port
-  * Using SDL2, SDL2_mixer, ImGui
-  * Maybe: Android port
+* Maybe: Text translations
+* Maybe: Android port
 * Maybe x2: support for other two tables
   * Table specific BL (control interactions and missions) is hardcoded, othere parts might be also patched
 

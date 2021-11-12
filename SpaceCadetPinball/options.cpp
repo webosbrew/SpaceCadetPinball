@@ -3,6 +3,7 @@
 
 #include "fullscrn.h"
 #include "midi.h"
+#include "render.h"
 #include "Sound.h"
 #include "winmain.h"
 
@@ -204,6 +205,7 @@ void options::toggle(Menu1 uIDCheckItem)
 		return;
 	case Menu1::Show_Menu:
 		Options.ShowMenu = Options.ShowMenu == 0;
+		fullscrn::window_size_changed();
 		return;
 	case Menu1::Full_Screen:
 		Options.FullScreen ^= true;
@@ -245,7 +247,7 @@ void options::toggle(Menu1 uIDCheckItem)
 		break;
 	case Menu1::WindowLinearFilter:
 		Options.LinearFiltering ^= true;
-		winmain::Restart();
+		render::recreate_screen_texture();
 		break;
 	default:
 		break;

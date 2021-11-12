@@ -35,6 +35,7 @@ public:
 
 	static void init(gdrv_bitmap8* bmp, float zMin, float zScaler, int width, int height);
 	static void uninit();
+	static void recreate_screen_texture();
 	static void update();
 	static void sprite_modified(render_sprite_type_struct* sprite);
 	static render_sprite_type_struct* create_sprite(VisualTypes visualType, gdrv_bitmap8* bmp,
@@ -59,10 +60,8 @@ private:
 	static rectangle_type vscreen_rect;
 	static gdrv_bitmap8 *ball_bitmap[20];
 	static zmap_header_type* zscreen;
-	static SDL_Texture* vScreenTex;
 
 	static void repaint(struct render_sprite_type_struct* sprite);
 	static void paint_balls();
 	static void unpaint_balls();
-	static void BlitVScreen();
 };

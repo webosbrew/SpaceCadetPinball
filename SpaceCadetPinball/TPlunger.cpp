@@ -37,7 +37,7 @@ void TPlunger::Collision(TBall* ball, vector_type* nextPosition, vector_type* di
 {
 	if (PinballTable->TiltLockFlag)
 		Message(1017, 0.0);
-	coef = RandFloat() * Boost * 0.1f + Boost;
+	coef = RandFloat() * Boost * 0.1f + Boost; // it is intended that the passed in coef is never used!
 	maths::basic_collision(ball, nextPosition, direction, Elasticity, Smoothness, Threshold, coef);
 }
 
