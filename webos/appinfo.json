@@ -1,6 +1,6 @@
 {
   "id": "com.github.k4zmu2a.space-cadet-pinball",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "vendor": "webOS Brew Project",
   "type": "native",
   "main": "SpaceCadetPinball",
