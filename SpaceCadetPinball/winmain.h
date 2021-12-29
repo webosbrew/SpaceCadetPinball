@@ -33,6 +33,31 @@ struct SdlPerformanceClock
 	}
 };
 
+struct WelfordState
+{
+	double mean;
+	double M2;
+	int64_t count;
+
+	WelfordState() : mean(0.005), M2(0), count(1)
+	{
+
+	}
+
+	void Advance(double newValue)
+	{
+		++count;
+		auto delta = newValue - mean;
+		mean += delta / count;
+		M2 += delta * (newValue - mean); //M2n = M2n-1 + (Xn - AvgXn-1) * (Xn - AvgXn)
+	}
+
+	double GetStdDev() const
+	{
+		return std::sqrt(M2 / (count - 1)); // Sn^2 = M2n / (n - 1)
+	}
+};
+
 class winmain
 {
 	using Clock = SdlPerformanceClock; // Or std::chrono::steady_clock.
@@ -40,15 +65,14 @@ class winmain
 	using TimePoint = std::chrono::time_point<Clock>;
 
 public:
-	static std::string DatFileName;
-	static int single_step;
+	static bool single_step;
 	static SDL_Window* MainWindow;
 	static SDL_Renderer* Renderer;
 	static ImGuiIO* ImIO;
 	static bool LaunchBallEnabled;
 	static bool HighScoresEnabled;
 	static bool DemoActive;
-	static char* BasePath;
+	static int MainMenuHeight;
 
 	static int WinMain(LPCSTR lpCmdLine);
 	static int event_handler(const SDL_Event* event);
@@ -62,8 +86,9 @@ public:
 	static bool RestartRequested() { return restart; }
 	static void UpdateFrameRate();
 private:
-	static int return_value, bQuit, DispFrameRate, DispGRhistory, activated;
-	static int has_focus, mouse_down, last_mouse_x, last_mouse_y, no_time_loss;
+	static int return_value, DispFrameRate;
+	static int mouse_down, last_mouse_x, last_mouse_y;
+	static bool no_time_loss, activated, bQuit, has_focus, DispGRhistory;
 	static gdrv_bitmap8* gfr_display;
 	static std::string FpsDetails;
 	static bool restart;
@@ -73,6 +98,10 @@ private:
 	static double UpdateToFrameRatio;
 	static DurationMs TargetFrameTime;
 	static struct optionsStruct& Options;
+	static DurationMs SpinThreshold;
+	static WelfordState SleepState;
 
 	static void RenderUi();
+	static void RenderFrameTimeDialog();
+	static void HybridSleep(DurationMs seconds);
 };

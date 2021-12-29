@@ -209,7 +209,7 @@ int LoadStringAlt(uint32_t uID, LPSTR lpBuffer, int cchBufferMax)
 {
 	auto str = rc_strings.find(uID);
 	if (str == rc_strings.end())
-	{		
+	{
 		return 0;
 	}
 
@@ -224,6 +224,7 @@ char pinball::getRcBuffer[6 * 256];
 int pinball::rc_string_slot = 0;
 int pinball::LeftShift = -1;
 int pinball::RightShift = -1;
+std::string pinball::BasePath;
 
 char* pinball::get_rc_string(int uID, int a2)
 {
@@ -248,8 +249,8 @@ int pinball::get_rc_int(int uID, int* dst)
 std::string pinball::make_path_name(const std::string& fileName)
 {
 #ifndef _SDL_webOS_h
-	return winmain::BasePath + fileName;
+    return BasePath + fileName;
 #else
-    return winmain::BasePath + ("data/" + fileName);
+    return BasePath + ("data/" + fileName);
 #endif
 }

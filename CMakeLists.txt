@@ -211,7 +211,7 @@ if(WIN32)
         string(REGEX REPLACE "lib$" "bin" SDL2_DLL_PATH ${SDL2_DLL_PATH})
         string(REGEX REPLACE "lib$" "bin" SDL2_MIXER_DLL_PATH ${SDL2_MIXER_DLL_PATH})
     endif()
-    message(STATUS "copy paths='${SDL2_DLL_PATH}' '${SDL2_MIXER_DLL_PATH}'")
+    message(STATUS "copy paths='${SDL2_DLL_PATH}' '${SDL2_MIXER_DLL_PATH}'") 
     add_custom_command(TARGET SpaceCadetPinball POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_DLL_PATH}/SDL2.dll" $<TARGET_FILE_DIR:SpaceCadetPinball>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL2_MIXER_DLL_PATH}/SDL2_mixer.dll" $<TARGET_FILE_DIR:SpaceCadetPinball>
@@ -221,18 +221,27 @@ endif()
 # On webOS, build IPK package
 if(WEBOS)
     add_custom_target(webos-package
-        COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
-        COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>/data
-        COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/icon.png $<TARGET_FILE_DIR:SpaceCadetPinball>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/splash.png $<TARGET_FILE_DIR:SpaceCadetPinball>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
-        COMMAND ${CMAKE_COMMAND} -E copy_directory webos/lib $<TARGET_FILE_DIR:SpaceCadetPinball>/lib
-        COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
-        # Force PATH environment variable to use system python
-        COMMAND PATH=/bin:/usr/bin python3 webos/gen_manifest.py -a $<TARGET_FILE_DIR:SpaceCadetPinball>/appinfo.json
-        -p *.ipk -o webosbrew.manifest.json
-        DEPENDS SpaceCadetPinball
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+            COMMAND wget -q -N https://archive.org/download/pinballxp/PinballXP.zip -O ${CMAKE_BINARY_DIR}/pinball.zip
+            COMMAND unzip -o ${CMAKE_BINARY_DIR}/pinball.zip -d $<TARGET_FILE_DIR:SpaceCadetPinball>/data
+            COMMAND OUTPUT_FILE=$<TARGET_FILE_DIR:SpaceCadetPinball>/gamecontrollerdb.txt sh webos/gen_gamecontrollerdb.sh
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/icon.png $<TARGET_FILE_DIR:SpaceCadetPinball>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/splash.png $<TARGET_FILE_DIR:SpaceCadetPinball>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different webos/appinfo.json $<TARGET_FILE_DIR:SpaceCadetPinball>
+            COMMAND ${CMAKE_COMMAND} -E copy_directory webos/lib $<TARGET_FILE_DIR:SpaceCadetPinball>/lib
+            COMMAND ares-package $<TARGET_FILE_DIR:SpaceCadetPinball>
+            # Force PATH environment variable to use system python
+            COMMAND PATH=/bin:/usr/bin python3 webos/gen_manifest.py -a $<TARGET_FILE_DIR:SpaceCadetPinball>/appinfo.json
+            -p *.ipk -o webosbrew.manifest.json
+            DEPENDS SpaceCadetPinball
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
+elseif(UNIX AND NOT APPLE)
+	include(GNUInstallDirs)
+	install(TARGETS "${PROJECT_NAME}" RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+	install(FILES "/Platform/Linux/${PROJECT_NAME}.desktop" DESTINATION "share/applications")
+	install(FILES "/Platform/Linux/${PROJECT_NAME}.metainfo.xml" DESTINATION "share/metainfo")
+	foreach(S 16 32 48 128 192)
+		install(FILES "${PROJECT_NAME}/Icon_${S}x${S}.png" DESTINATION
+			"share/icons/hicolor/${S}x${S}/apps" RENAME "${PROJECT_NAME}.png")
+	endforeach(S)
 endif()

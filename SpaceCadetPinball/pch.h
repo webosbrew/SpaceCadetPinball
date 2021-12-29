@@ -29,6 +29,7 @@
 #include <string>
 #include <thread>
 #include <map>
+//#include <array>
 
 #define SDL_MAIN_HANDLED
 #include "SDL.h"
@@ -76,5 +77,32 @@ inline float RandFloat()
 {
 	return static_cast<float>(std::rand() / static_cast<double>(RAND_MAX));
 }
+
+template <typename T> constexpr
+int Sign(T val)
+{
+	return (T(0) < val) - (val < T(0));
+}
+
+// UTF-8 path adapter for fopen on Windows, implemented in SpaceCadetPinball.cpp
+#ifdef _WIN32
+extern FILE* fopenu(const char* path, const char* opt);
+#else
+inline FILE* fopenu(const char* path, const char* opt)
+{
+	return fopen(path, opt);
+}
+#endif
+
+// Platform specific data paths not found in SDL
+constexpr const char* PlatformDataPaths[2] = 
+{
+	#ifdef _WIN32
+	nullptr
+	#else
+	"/usr/local/share/SpaceCadetPinball/",
+	"/usr/share/SpaceCadetPinball/"
+	#endif
+};
 
 #endif //PCH_H

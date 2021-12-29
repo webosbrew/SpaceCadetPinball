@@ -26,6 +26,8 @@ enum class Menu1:int
 	R1024x768 = 503,
 	WindowUniformScale = 600,
 	WindowLinearFilter = 601,
+	WindowIntegerScale = 602,
+	Prefer3DPBGameData = 700,
 };
 
 enum class InputTypes: unsigned
@@ -73,6 +75,9 @@ struct optionsStruct
 	bool ShowMenu;
 	bool UncappedUpdatesPerSecond;
 	int SoundChannels;
+	bool HybridSleep;
+	bool Prefer3DPBGameData;
+	bool IntegerScaling;
 };
 
 struct ControlRef
@@ -92,7 +97,8 @@ public:
 	static constexpr int MaxSoundChannels = 32, MinSoundChannels = 1, DefSoundChannels = 8;
 	static optionsStruct Options;
 
-	static void init();
+	static void InitPrimary();
+	static void InitSecondary();
 	static void uninit();
 	static int get_int(LPCSTR lpValueName, int defaultValue);
 	static void set_int(LPCSTR lpValueName, int data);

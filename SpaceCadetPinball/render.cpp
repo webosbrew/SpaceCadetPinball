@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render.h"
 
+#include "fullscrn.h"
 #include "GroupData.h"
 #include "options.h"
 #include "pb.h"
@@ -15,7 +16,6 @@ float render::zscaler, render::zmin, render::zmax;
 rectangle_type render::vscreen_rect;
 gdrv_bitmap8 *render::vscreen, *render::background_bitmap, *render::ball_bitmap[20];
 zmap_header_type* render::zscreen;
-SDL_Texture* render::vScreenTex = nullptr;
 SDL_Rect render::DestinationRect{};
 
 void render::init(gdrv_bitmap8* bmp, float zMin, float zScaler, int width, int height)
@@ -41,17 +41,7 @@ void render::init(gdrv_bitmap8* bmp, float zMin, float zScaler, int width, int h
 	else
 		gdrv::fill_bitmap(vscreen, vscreen->Width, vscreen->Height, 0, 0, 0);
 
-	{
-		UsingSdlHint hint{SDL_HINT_RENDER_SCALE_QUALITY, options::Options.LinearFiltering ? "linear" : "nearest"};
-		vScreenTex = SDL_CreateTexture
-		(
-			winmain::Renderer,
-			SDL_PIXELFORMAT_ARGB8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			width, height
-		);
-		SDL_SetTextureBlendMode(vScreenTex, SDL_BLENDMODE_NONE);
-	}
+	recreate_screen_texture();
 }
 
 void render::uninit()
@@ -67,7 +57,11 @@ void render::uninit()
 	ball_list.clear();
 	dirty_list.clear();
 	sprite_list.clear();
-	SDL_DestroyTexture(vScreenTex);
+}
+
+void render::recreate_screen_texture()
+{
+	vscreen->CreateTexture(options::Options.LinearFiltering ? "linear" : "nearest", SDL_TEXTUREACCESS_STREAMING);
 }
 
 void render::update()
@@ -420,7 +414,7 @@ void render::build_occlude_list()
 				}
 			}
 
-			if (!mainSprite->UnknownFlag && mainSprite->Bmp && spriteArr->size() < 2)
+			if (mainSprite->Bmp && spriteArr->size() < 2)
 				spriteArr->clear();
 			if (!spriteArr->empty())
 			{
@@ -525,80 +519,70 @@ void render::SpriteViewer(bool* show)
 	ImGui::End();
 }
 
-void render::BlitVScreen()
+void render::PresentVScreen()
 {
-	int pitch = 0;
-	ColorRgba* lockedPixels;
-	SDL_LockTexture
-	(
-		vScreenTex,
-		nullptr,
-		reinterpret_cast<void**>(&lockedPixels),
-		&pitch
-	);
-	assertm(static_cast<unsigned>(pitch) == vscreen->Width * sizeof(ColorRgba), "Padding on vScreen texture");
+	vscreen->BlitToTexture();
 
 	if (offset_x == 0 && offset_y == 0)
 	{
-		// No offset - direct copy
-		std::memcpy(lockedPixels, vscreen->BmpBufPtr1, vscreen->Width * vscreen->Height * sizeof(ColorRgba));
+		SDL_RenderCopy(winmain::Renderer, vscreen->Texture, nullptr, &DestinationRect);
 	}
 	else
 	{
-		// Copy offset table and fixed side bar
-		auto tableWidth = pb::MainTable->Width;
-		auto scoreWidth = vscreen->Width - pb::MainTable->Width;
-		auto tableStride = tableWidth * sizeof(ColorRgba);
-		auto scoreStride = scoreWidth * sizeof(ColorRgba);
-		auto srcScorePtr = &vscreen->BmpBufPtr1[tableWidth];
-
-		auto xSrc = 0, ySrc = 0, xDst = offset_x, yDst = offset_y, height = vscreen->Height;
-
-		// Negative dst == positive src offset
-		if (xDst < 0)
+		auto tableWidthCoef = static_cast<float>(pb::MainTable->Width) / vscreen->Width;
+		auto srcSeparationX = static_cast<int>(round(vscreen->Width * tableWidthCoef));
+		auto srcBoardRect = SDL_Rect
 		{
-			xSrc -= xDst;
-			xDst = 0;
-		}
-		if (yDst < 0)
+			0, 0,
+			srcSeparationX, vscreen->Height
+		};
+		auto srcSidebarRect = SDL_Rect
 		{
-			ySrc -= yDst;
-			yDst = 0;
-		}
+			srcSeparationX, 0,
+			vscreen->Width - srcSeparationX, vscreen->Height
+		};
 
-		if (xSrc)
+#if SDL_VERSION_ATLEAST(2, 0, 10)
+		// SDL_RenderCopyF was added in 2.0.10
+		auto dstSeparationX = DestinationRect.w * tableWidthCoef;
+		auto dstBoardRect = SDL_FRect
 		{
-			tableStride -= xSrc * sizeof(ColorRgba);
-		}
-		if (xDst)
+			DestinationRect.x + offset_x * fullscrn::ScaleX,
+			DestinationRect.y + offset_y * fullscrn::ScaleY,
+			dstSeparationX, static_cast<float>(DestinationRect.h)
+		};
+		auto dstSidebarRect = SDL_FRect
 		{
-			tableStride -= xDst * sizeof(ColorRgba);
-			tableWidth -= xDst;
-			scoreWidth += xDst;
-		}
-		if (ySrc)
-			height -= ySrc;
+			DestinationRect.x + dstSeparationX, static_cast<float>(DestinationRect.y),
+			DestinationRect.w - dstSeparationX, static_cast<float>(DestinationRect.h)
+		};
 
-		auto srcBmpPtr = &vscreen->BmpBufPtr1[vscreen->Width * ySrc + xSrc];
-		auto dstPtr = &lockedPixels[vscreen->Width * yDst + xDst];
-		for (int y = height; y > 0; --y)
-		{
-			std::memcpy(dstPtr, srcBmpPtr, tableStride);
-			dstPtr += tableWidth;
-			std::memcpy(dstPtr, srcScorePtr, scoreStride);
-			dstPtr += scoreWidth;
+		SDL_RenderCopyF(winmain::Renderer, vscreen->Texture, &srcBoardRect, &dstBoardRect);
+		SDL_RenderCopyF(winmain::Renderer, vscreen->Texture, &srcSidebarRect, &dstSidebarRect);
+#else
+		// SDL_RenderCopy cannot express sub pixel offset.
+		// Vscreen shift is required for that.
+		auto dstSeparationX = static_cast<int>(DestinationRect.w * tableWidthCoef);
+		auto scaledOffX = static_cast<int>(round(offset_x * fullscrn::ScaleX));
+		if (offset_x != 0 && scaledOffX == 0)
+			scaledOffX = Sign(offset_x);
+		auto scaledOffY = static_cast<int>(round(offset_y * fullscrn::ScaleY));
+		if (offset_y != 0 && scaledOffX == 0)
+			scaledOffY = Sign(offset_y);
 
-			srcBmpPtr += vscreen->Stride;
-			srcScorePtr += vscreen->Stride;
-		}
+		auto dstBoardRect = SDL_Rect
+		{
+			DestinationRect.x + scaledOffX, DestinationRect.y + scaledOffY,
+			dstSeparationX, DestinationRect.h
+		};
+		auto dstSidebarRect = SDL_Rect
+		{
+			DestinationRect.x + dstSeparationX, DestinationRect.y,
+			DestinationRect.w - dstSeparationX, DestinationRect.h
+		};
+
+		SDL_RenderCopy(winmain::Renderer, vscreen->Texture, &srcBoardRect, &dstBoardRect);
+		SDL_RenderCopy(winmain::Renderer, vscreen->Texture, &srcSidebarRect, &dstSidebarRect);
+#endif
 	}
-
-
-	SDL_UnlockTexture(vScreenTex);
-}
-
-void render::PresentVScreen()
-{
-	BlitVScreen();
-	SDL_RenderCopy(winmain::Renderer, vScreenTex, nullptr, &DestinationRect);
 }

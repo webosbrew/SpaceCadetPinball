@@ -40,10 +40,12 @@ public:
 	static DatFile* record_table;
 	static TPinballTable* MainTable;
 	static high_score_struct highscore_table[5];
-	static bool FullTiltMode;
+	static bool FullTiltMode, FullTiltDemoMode;
+	static std::string DatFileName;
 
 	static int init();
 	static int uninit();
+	static void SelectDatFile(const std::vector<const char*>& dataSearchPaths);
 	static void reset_table();
 	static void firsttime_setup();
 	static void mode_change(int mode);
@@ -57,7 +59,7 @@ public:
 	static void loose_focus();
 	static void InputUp(GameInput input);
 	static void InputDown(GameInput input);
-	static int mode_countdown(int time);
+	static int mode_countdown(float time);
 	static void launch_ball();
 	static void end_game();
 	static void high_scores();
@@ -66,7 +68,8 @@ public:
 	static float collide(float timeNow, float timeDelta, TBall* ball);
 	static void PushCheat(const std::string& cheat);
 private:
-	static int demo_mode, mode_countdown_;
+	static int demo_mode;
+	static float mode_countdown_;
 
 	static bool AnyBindingMatchesInput(GameInput (&options)[3], GameInput key);
 };

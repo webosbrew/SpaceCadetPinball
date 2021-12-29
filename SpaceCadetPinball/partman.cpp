@@ -16,7 +16,7 @@ DatFile* partman::load_records(LPCSTR lpFileName, bool fullTiltMode)
 	dat8BitBmpHeader bmpHeader{};
 	dat16BitBmpHeader zMapHeader{};
 
-	auto fileHandle = fopen(lpFileName, "rb");
+	auto fileHandle = fopenu(lpFileName, "rb");
 	if (fileHandle == nullptr)
 		return nullptr;
 
@@ -86,22 +86,29 @@ DatFile* partman::load_records(LPCSTR lpFileName, bool fullTiltMode)
 				{
 					zMapResolution = LRead<uint8_t>(fileHandle);
 					fieldSize--;
+
+					// -1 means universal resolution, maybe. FT demo .006 is the only known user.	
+					if (zMapResolution == 0xff)
+						zMapResolution = 0;
+
 					assertm(zMapResolution <= 2, "partman: zMap resolution out of bounds");
 				}
 
 				fread(&zMapHeader, 1, sizeof(dat16BitBmpHeader), fileHandle);
 				auto length = fieldSize - sizeof(dat16BitBmpHeader);
 
-				auto zMap = new zmap_header_type(zMapHeader.Width, zMapHeader.Height, zMapHeader.Stride);
-				zMap->Resolution = zMapResolution;
+				zmap_header_type* zMap;
 				if (zMapHeader.Stride * zMapHeader.Height * 2u == length)
 				{
+					zMap = new zmap_header_type(zMapHeader.Width, zMapHeader.Height, zMapHeader.Stride);
+					zMap->Resolution = zMapResolution;
 					fread(zMap->ZPtr1, 1, length, fileHandle);
 				}
 				else
 				{
 					// 3DPB .dat has zeroed zMap headers, in groups 497 and 498, skip them.
 					fseek(fileHandle, static_cast<int>(length), SEEK_CUR);
+					zMap = new zmap_header_type(0, 0, 0);
 				}
 				entryData->Buffer = reinterpret_cast<char*>(zMap);
 			}

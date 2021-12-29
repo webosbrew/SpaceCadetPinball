@@ -3,6 +3,7 @@
 
 #include "fullscrn.h"
 #include "midi.h"
+#include "render.h"
 #include "Sound.h"
 #include "winmain.h"
 
@@ -25,7 +26,7 @@ const ControlRef options::Controls[6]
 };
 
 
-void options::init()
+void options::InitPrimary()
 {
 	auto imContext = ImGui::GetCurrentContext();
 	ImGuiSettingsHandler ini_handler;
@@ -98,7 +99,13 @@ void options::init()
 	Options.UncappedUpdatesPerSecond = get_int("Uncapped Updates Per Second", false);
 	Options.SoundChannels = get_int("Sound Channels", DefSoundChannels);
 	Options.SoundChannels = std::min(MaxSoundChannels, std::max(MinSoundChannels, Options.SoundChannels));
+	Options.HybridSleep = get_int("HybridSleep", false);
+	Options.Prefer3DPBGameData = get_int("Prefer 3DPB Game Data", false);
+	Options.IntegerScaling = get_int("Integer Scaling", false);
+}
 
+void options::InitSecondary()
+{
 	winmain::UpdateFrameRate();
 
 	auto maxRes = fullscrn::GetMaxResolution();
@@ -129,6 +136,9 @@ void options::uninit()
 	set_int("ShowMenu", Options.ShowMenu);
 	set_int("Uncapped Updates Per Second", Options.UncappedUpdatesPerSecond);
 	set_int("Sound Channels", Options.SoundChannels);
+	set_int("HybridSleep", Options.HybridSleep);
+	set_int("Prefer 3DPB Game Data", Options.Prefer3DPBGameData);
+	set_int("Integer Scaling", Options.IntegerScaling);
 }
 
 
@@ -204,6 +214,7 @@ void options::toggle(Menu1 uIDCheckItem)
 		return;
 	case Menu1::Show_Menu:
 		Options.ShowMenu = Options.ShowMenu == 0;
+		fullscrn::window_size_changed();
 		return;
 	case Menu1::Full_Screen:
 		Options.FullScreen ^= true;
@@ -245,7 +256,15 @@ void options::toggle(Menu1 uIDCheckItem)
 		break;
 	case Menu1::WindowLinearFilter:
 		Options.LinearFiltering ^= true;
+		render::recreate_screen_texture();
+		break;
+	case Menu1::Prefer3DPBGameData:
+		Options.Prefer3DPBGameData ^= true;
 		winmain::Restart();
+		break;
+	case Menu1::WindowIntegerScale:
+		Options.IntegerScaling ^= true;
+		fullscrn::window_size_changed();
 		break;
 	default:
 		break;
